@@ -4,8 +4,6 @@ A browser-based IDE for [CadQuery](https://cadquery.readthedocs.io/) - the Pytho
 
 Write CadQuery Python code in your browser, click Build, and see your 3D model instantly.
 
-![CadQuery Web IDE Screenshot](https://raw.githubusercontent.com/tabibazar/cadquery-web-ide/main/screenshot.png)
-
 ## Features
 
 - **Monaco Editor** - VS Code's editor with Python syntax highlighting and autocomplete
