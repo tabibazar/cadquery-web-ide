@@ -1,0 +1,18 @@
+# CadQuery Web IDE - Production Dependencies
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# CadQuery and dependencies
+cadquery-ocp>=7.7.0
+cadquery>=2.4.0
+
+# Production server
+gunicorn>=21.0.0
+
+# Security & Validation
+python-multipart>=0.0.6
+
+# Rate limiting
+slowapi>=0.1.9

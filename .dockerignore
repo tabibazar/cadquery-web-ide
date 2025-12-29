@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+env/
+.eggs/
+*.egg-info/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.spec
+
+# Environment files (use Docker env instead)
+.env
+.env.local
+
+# Documentation
+*.md
+docs/
+
+# Misc
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+test_*.stl
+test_*.glb

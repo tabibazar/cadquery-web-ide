@@ -1,0 +1,1027 @@
+<!--
+  CadQuery Web IDE
+  A browser-based IDE for CadQuery - the Python CAD modeling library.
+
+  GitHub: https://github.com/tabibazar/cadquery-web-ide
+  Author: tabibazar.com
+  License: MIT
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CadQuery Web IDE</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230e639c' rx='15' width='100' height='100'/><text x='50' y='72' font-size='65' font-family='Arial,sans-serif' font-weight='bold' fill='white' text-anchor='middle'>C</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2d2d2d;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #404040;
+            height: 50px;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #0e639c;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1177bb;
+        }
+
+        .btn-primary:disabled {
+            background: #4a4a4a;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #3c3c3c;
+            color: #d4d4d4;
+        }
+
+        .btn-secondary:hover {
+            background: #4a4a4a;
+        }
+
+        .status {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .status.loading {
+            color: #dcdcaa;
+        }
+
+        .status.success {
+            color: #4ec9b0;
+        }
+
+        .status.error {
+            color: #f14c4c;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 50px);
+        }
+
+        .editor-panel {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #404040;
+        }
+
+        .editor-header {
+            background: #252526;
+            padding: 8px 15px;
+            font-size: 12px;
+            color: #888;
+            border-bottom: 1px solid #404040;
+        }
+
+        #editor-container {
+            flex: 1;
+        }
+
+        .viewer-panel {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .viewer-header {
+            background: #252526;
+            padding: 8px 15px;
+            font-size: 12px;
+            color: #888;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #viewer-container {
+            flex: 1;
+            background: #1a1a2e;
+        }
+
+        #viewer-container canvas {
+            display: block;
+        }
+
+        .error-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 40%;
+            background: #1e1e1e;
+            border-top: 1px solid #f14c4c;
+            overflow: auto;
+            display: none;
+        }
+
+        .error-panel.visible {
+            display: block;
+        }
+
+        .error-header {
+            background: #5a1d1d;
+            padding: 8px 15px;
+            font-size: 12px;
+            color: #f14c4c;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+        }
+
+        .error-close {
+            background: none;
+            border: none;
+            color: #f14c4c;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .error-content {
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            color: #f14c4c;
+        }
+
+        .viewer-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .viewer-controls button {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(45, 45, 45, 0.9);
+            color: #d4d4d4;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewer-controls button:hover {
+            background: rgba(60, 60, 60, 0.9);
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .loading-overlay.visible {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #404040;
+            border-top-color: #0e639c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .examples-dropdown {
+            position: relative;
+        }
+
+        .examples-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            min-width: 200px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .examples-menu.visible {
+            display: block;
+        }
+
+        .examples-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            border: none;
+            background: transparent;
+            color: #d4d4d4;
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .examples-menu button:hover {
+            background: #094771;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #252526;
+            border-top: 1px solid #404040;
+            padding: 6px 20px;
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .footer a {
+            color: #4a90d9;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-sep {
+            margin: 0 8px;
+            color: #404040;
+        }
+
+        .main-container {
+            height: calc(100vh - 50px - 28px);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CadQuery Web IDE</h1>
+        <div class="header-actions">
+            <span id="status" class="status">Ready</span>
+            <div class="examples-dropdown">
+                <button class="btn btn-secondary" id="examples-btn">Examples ▾</button>
+                <div class="examples-menu" id="examples-menu">
+                    <button data-example="pillowBlock">Pillow Block</button>
+                    <button data-example="box">Filleted Box</button>
+                    <button data-example="loftedShape">Lofted Shape</button>
+                    <button data-example="revolvedCup">Revolved Cup</button>
+                    <button data-example="shell">Hollow Box</button>
+                    <button data-example="bracket">Mounting Bracket</button>
+                    <button data-example="hexNut">Hex Nut</button>
+                    <button data-example="pipe">Swept Pipe</button>
+                    <button data-example="lego">Lego Brick</button>
+                    <button data-example="bearing">Ball Bearing</button>
+                    <button data-example="text3d">3D Text</button>
+                    <button data-example="zenGarden">Zen Garden</button>
+                </div>
+            </div>
+            <input type="file" id="file-input" accept=".py,.txt" style="display: none;">
+            <button class="btn btn-secondary" id="open-btn" title="Open Python file">📂 Open</button>
+            <button class="btn btn-secondary" id="save-btn" title="Save Python file">💾 Save</button>
+            <button class="btn btn-primary" id="build-btn">▶ Build</button>
+            <button class="btn btn-secondary" id="download-stl-btn" title="Download STL">⬇ STL</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="editor-panel">
+            <div class="editor-header">main.py — Assign your CadQuery object to 'result'</div>
+            <div id="editor-container"></div>
+        </div>
+
+        <div class="viewer-panel">
+            <div class="viewer-header">
+                <span>3D Viewer</span>
+                <span id="viewer-info" style="font-size: 11px; color: #666;">Drag to rotate • Scroll to zoom • Right-drag to pan</span>
+            </div>
+            <div id="viewer-container"></div>
+            <div class="loading-overlay" id="loading-overlay">
+                <div class="spinner"></div>
+            </div>
+            <div class="viewer-controls">
+                <button id="reset-view" title="Reset View">⌂</button>
+                <button id="toggle-wireframe" title="Toggle Wireframe">▦</button>
+            </div>
+            <div class="error-panel" id="error-panel">
+                <div class="error-header">
+                    <span>⚠ Error</span>
+                    <button class="error-close" id="error-close">×</button>
+                </div>
+                <div class="error-content" id="error-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+
+    <!-- Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // === Example Code Snippets ===
+        // From CadQuery Documentation: https://cadquery.readthedocs.io/en/latest/examples.html
+        const examples = {
+            pillowBlock: `# Pillow Block with Counterbored Holes
+# cq is pre-imported, just use it directly
+
+height = 60.0
+width = 80.0
+thickness = 10.0
+diameter = 22.0
+padding = 12.0
+
+result = (
+    cq.Workplane("XY")
+    .box(height, width, thickness)
+    .faces(">Z")
+    .workplane()
+    .hole(diameter)
+    .faces(">Z")
+    .workplane()
+    .rect(height - padding, width - padding, forConstruction=True)
+    .vertices()
+    .cboreHole(2.4, 4.4, 2.1)
+    .edges("|Z")
+    .fillet(2.0)
+)`,
+            box: `# Filleted Box
+# Simple box with rounded vertical edges
+
+result = (
+    cq.Workplane("XY")
+    .box(30, 20, 10)
+    .edges("|Z")
+    .fillet(2)
+)`,
+            loftedShape: `# Lofted Shape
+# Transition from rectangle to circle
+
+result = (
+    cq.Workplane("XY")
+    .rect(20, 20)
+    .workplane(offset=30)
+    .circle(10)
+    .loft()
+)`,
+            revolvedCup: `# Revolved Cup/Vase
+# Create a cup shape by revolving a profile
+
+result = (
+    cq.Workplane("XZ")
+    .moveTo(15, 0)
+    .lineTo(20, 0)
+    .lineTo(20, 5)
+    .lineTo(18, 5)
+    .lineTo(15, 40)
+    .lineTo(12, 40)
+    .lineTo(12, 38)
+    .lineTo(14, 38)
+    .lineTo(17, 5)
+    .lineTo(17, 3)
+    .lineTo(15, 3)
+    .close()
+    .revolve(360, (0, 0, 0), (0, 1, 0))
+)`,
+            shell: `# Hollow Box (Shell)
+# Create a box and hollow it out
+
+result = (
+    cq.Workplane("XY")
+    .box(30, 20, 15)
+    .faces(">Z")
+    .shell(-2)
+    .edges("|Z")
+    .fillet(1)
+)`,
+            bracket: `# Mounting Bracket
+# L-shaped bracket with mounting holes
+
+result = (
+    cq.Workplane("XY")
+    .box(40, 30, 5)
+    .faces(">Y")
+    .workplane()
+    .transformed(offset=(0, 2.5, 15))
+    .box(40, 5, 30, centered=(True, True, False))
+    .faces(">Z")
+    .workplane()
+    .pushPoints([(-12, 0), (12, 0)])
+    .hole(5)
+    .faces(">Y")
+    .workplane()
+    .pushPoints([(-12, 10), (12, 10)])
+    .hole(5)
+    .edges("|Z")
+    .fillet(2)
+)`,
+            hexNut: `# Hex Nut
+# Hexagonal nut with threaded hole
+
+# Nut dimensions (M10)
+across_flats = 17  # Width across flats
+thickness = 8
+hole_diameter = 10
+
+result = (
+    cq.Workplane("XY")
+    .polygon(6, across_flats)
+    .extrude(thickness)
+    .faces(">Z")
+    .workplane()
+    .hole(hole_diameter)
+    .faces(">Z or <Z")
+    .chamfer(1)
+)`,
+            pipe: `# Swept Pipe
+# Create a pipe along a path
+
+# Define the path
+path = (
+    cq.Workplane("XZ")
+    .moveTo(0, 0)
+    .lineTo(0, 20)
+    .radiusArc((20, 40), 20)
+    .lineTo(60, 40)
+)
+
+# Sweep a circle along the path
+result = (
+    cq.Workplane("XY")
+    .circle(5)
+    .sweep(path)
+)`,
+            lego: `# Lego-style Brick
+
+# Parameters
+length = 4  # studs
+width = 2   # studs
+stud_diameter = 4.8
+stud_height = 1.8
+brick_height = 9.6
+pitch = 8.0
+
+result = (
+    cq.Workplane("XY")
+    .box(length * pitch, width * pitch, brick_height)
+    .faces(">Z")
+    .workplane()
+    .rarray(pitch, pitch, length, width)
+    .circle(stud_diameter / 2)
+    .extrude(stud_height)
+    .faces("<Z")
+    .shell(-1.5)
+)`,
+            bearing: `# Simple Ball Bearing
+
+outer_radius = 20
+inner_radius = 10
+width = 8
+ball_radius = 3
+ball_count = 8
+
+# Outer ring
+outer = (
+    cq.Workplane("XY")
+    .circle(outer_radius)
+    .circle(outer_radius - 3)
+    .extrude(width)
+)
+
+# Inner ring
+inner = (
+    cq.Workplane("XY")
+    .circle(inner_radius + 3)
+    .circle(inner_radius)
+    .extrude(width)
+)
+
+# Balls
+mid_radius = (outer_radius + inner_radius) / 2
+balls = (
+    cq.Workplane("XY")
+    .workplane(offset=width/2)
+    .polarArray(mid_radius, 0, 360, ball_count)
+    .sphere(ball_radius)
+)
+
+result = outer.union(inner).union(balls)`,
+            text3d: `# 3D Text Stamp
+# Mirrored text for stamping/embossing
+
+# Create base plate with handle (bottom at Z=0)
+base = (
+    cq.Workplane("XY")
+    .workplane(offset=4)
+    .box(70, 25, 8)
+    .faces(">Z")
+    .workplane()
+    .box(20, 15, 12)
+)
+
+# Create text, flip 180 around X axis for stamp mirror effect
+text = (
+    cq.Workplane("XY")
+    .workplane(offset=-3)
+    .text("STAMP", 10, 6, font="Sans")
+    .rotateAboutCenter((1, 0, 0), 180)
+)
+
+# Combine - text sticks out bottom for stamping
+result = base.union(text)`,
+            zenGarden: `# Zen Garden Ripple Disc
+# A disc with concentric ripple waves - perfect for stamps or coasters
+
+# Parameters
+disc_radius = 50.0
+avg_thickness = 10.0
+wave_amplitude = 2.5
+num_waves = 4.5
+resolution = 150
+
+# Generate wavy top profile points
+wave_profile_points = []
+for i in range(resolution + 1):
+    x_pos = (i / resolution) * disc_radius
+    angle = (x_pos / disc_radius) * num_waves * (2 * math.pi)
+    z_pos = avg_thickness + wave_amplitude * math.cos(angle)
+    wave_profile_points.append((x_pos, z_pos))
+
+# Reverse points to draw from outer edge to center
+points_reversed = wave_profile_points[::-1]
+outer_edge_top_point = points_reversed[0]
+
+# Build cross-section and revolve
+result = (
+    cq.Workplane("XZ")
+    .moveTo(0, 0)
+    .lineTo(disc_radius, 0)
+    .lineTo(outer_edge_top_point[0], outer_edge_top_point[1])
+    .spline(points_reversed[1:])
+    .close()
+    .revolve(360, (0, 0, 0), (0, 1, 0))
+)`
+        };
+
+        // === Monaco Editor Setup ===
+        let editor;
+
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+
+        require(['vs/editor/editor.main'], function () {
+            // Register Python language hints for CadQuery
+            monaco.languages.registerCompletionItemProvider('python', {
+                provideCompletionItems: function (model, position) {
+                    const suggestions = [
+                        { label: 'cq.Workplane', kind: monaco.languages.CompletionItemKind.Function, insertText: 'cq.Workplane("XY")' },
+                        { label: '.box', kind: monaco.languages.CompletionItemKind.Method, insertText: '.box(${1:length}, ${2:width}, ${3:height})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: '.cylinder', kind: monaco.languages.CompletionItemKind.Method, insertText: '.cylinder(radius=${1:10}, height=${2:20})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: '.sphere', kind: monaco.languages.CompletionItemKind.Method, insertText: '.sphere(${1:radius})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: '.extrude', kind: monaco.languages.CompletionItemKind.Method, insertText: '.extrude(${1:distance})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: '.fillet', kind: monaco.languages.CompletionItemKind.Method, insertText: '.fillet(${1:radius})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: '.chamfer', kind: monaco.languages.CompletionItemKind.Method, insertText: '.chamfer(${1:length})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: '.hole', kind: monaco.languages.CompletionItemKind.Method, insertText: '.hole(${1:diameter})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: '.faces', kind: monaco.languages.CompletionItemKind.Method, insertText: '.faces("${1:>Z}")', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: '.edges', kind: monaco.languages.CompletionItemKind.Method, insertText: '.edges("${1:|Z}")', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                    ];
+                    return { suggestions: suggestions };
+                }
+            });
+
+            editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: examples.pillowBlock,
+                language: 'python',
+                theme: 'vs-dark',
+                fontSize: 14,
+                lineNumbers: 'on',
+                minimap: { enabled: false },
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                tabSize: 4,
+                insertSpaces: true,
+            });
+
+            // Ctrl+Enter to build
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, buildModel);
+        });
+
+        // === Three.js Setup ===
+        const container = document.getElementById('viewer-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+
+        const camera = new THREE.PerspectiveCamera(
+            45,
+            container.clientWidth / container.clientHeight,
+            0.1,
+            10000
+        );
+        camera.position.set(50, 50, 50);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(50, 100, 50);
+        scene.add(directionalLight);
+
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+        directionalLight2.position.set(-50, -50, -50);
+        scene.add(directionalLight2);
+
+        // Grid helper
+        const gridHelper = new THREE.GridHelper(100, 20, 0x444444, 0x333333);
+        scene.add(gridHelper);
+
+        // Axes helper
+        const axesHelper = new THREE.AxesHelper(35);
+        scene.add(axesHelper);
+
+        // Current model group
+        let modelGroup = new THREE.Group();
+        scene.add(modelGroup);
+
+        // Wireframe mode
+        let wireframeMode = false;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        // === GLB Loader ===
+        const loader = new GLTFLoader();
+
+        function loadGLB(base64Data) {
+            // Clear existing model
+            while (modelGroup.children.length > 0) {
+                const child = modelGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(m => m.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+                modelGroup.remove(child);
+            }
+
+            // Decode base64 to ArrayBuffer
+            const binary = atob(base64Data);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            // Load GLB
+            loader.parse(bytes.buffer, '', (gltf) => {
+                gltf.scene.traverse((child) => {
+                    if (child.isMesh) {
+                        // Apply nice material
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: 0x4a90d9,
+                            metalness: 0.3,
+                            roughness: 0.6,
+                            wireframe: wireframeMode,
+                        });
+                    }
+                });
+
+                modelGroup.add(gltf.scene);
+
+                // Auto-fit camera to model
+                const box = new THREE.Box3().setFromObject(gltf.scene);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                cameraZ *= 2;
+
+                camera.position.set(center.x + cameraZ * 0.5, center.y + cameraZ * 0.5, center.z + cameraZ);
+                controls.target.copy(center);
+                controls.update();
+            }, (error) => {
+                console.error('Error loading GLB:', error);
+                showError('Failed to load 3D model: ' + error.message);
+            });
+        }
+
+        // === UI Functions ===
+        const buildBtn = document.getElementById('build-btn');
+        const statusEl = document.getElementById('status');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const errorPanel = document.getElementById('error-panel');
+        const errorContent = document.getElementById('error-content');
+        const errorClose = document.getElementById('error-close');
+        const resetViewBtn = document.getElementById('reset-view');
+        const toggleWireframeBtn = document.getElementById('toggle-wireframe');
+        const examplesBtn = document.getElementById('examples-btn');
+        const examplesMenu = document.getElementById('examples-menu');
+        const openBtn = document.getElementById('open-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const fileInput = document.getElementById('file-input');
+
+        // Track current filename for save
+        let currentFileName = 'model.py';
+
+        function setStatus(text, type = '') {
+            statusEl.textContent = text;
+            statusEl.className = 'status ' + type;
+        }
+
+        function showError(message) {
+            errorContent.textContent = message;
+            errorPanel.classList.add('visible');
+        }
+
+        function hideError() {
+            errorPanel.classList.remove('visible');
+        }
+
+        async function buildModel() {
+            if (!editor) return;
+
+            const code = editor.getValue();
+            if (!code.trim()) {
+                showError('Please enter some CadQuery code');
+                return;
+            }
+
+            hideError();
+            buildBtn.disabled = true;
+            loadingOverlay.classList.add('visible');
+            setStatus('Building...', 'loading');
+
+            try {
+                const response = await fetch('/render', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.glb_data) {
+                    loadGLB(data.glb_data);
+                    setStatus('Build successful', 'success');
+                } else {
+                    showError(data.error || 'Unknown error occurred');
+                    setStatus('Build failed', 'error');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+                setStatus('Build failed', 'error');
+            } finally {
+                buildBtn.disabled = false;
+                loadingOverlay.classList.remove('visible');
+            }
+        }
+
+        // === Download STL ===
+        const downloadStlBtn = document.getElementById('download-stl-btn');
+
+        async function downloadSTL() {
+            if (!editor) return;
+
+            const code = editor.getValue();
+            if (!code.trim()) {
+                showError('Please enter some CadQuery code');
+                return;
+            }
+
+            hideError();
+            downloadStlBtn.disabled = true;
+            loadingOverlay.classList.add('visible');
+            setStatus('Exporting STL...', 'loading');
+
+            try {
+                const response = await fetch('/export-stl', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    // Decode base64 and create download
+                    const binary = atob(data.data);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) {
+                        bytes[i] = binary.charCodeAt(i);
+                    }
+                    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = data.filename || 'model.stl';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    setStatus('STL downloaded', 'success');
+                } else {
+                    showError(data.error || 'Failed to export STL');
+                    setStatus('Export failed', 'error');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+                setStatus('Export failed', 'error');
+            } finally {
+                downloadStlBtn.disabled = false;
+                loadingOverlay.classList.remove('visible');
+            }
+        }
+
+        // Event Listeners
+        buildBtn.addEventListener('click', buildModel);
+        downloadStlBtn.addEventListener('click', downloadSTL);
+        errorClose.addEventListener('click', hideError);
+
+        // Open file handler
+        openBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                currentFileName = file.name;
+                file.text().then(text => {
+                    editor.setValue(text);
+                    setStatus('Opened: ' + file.name);
+                }).catch(err => {
+                    showError('Failed to read file: ' + err.message);
+                });
+                fileInput.value = ''; // Reset for same file selection
+            }
+        });
+
+        // Save file handler
+        saveBtn.addEventListener('click', () => {
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setStatus('Saved: ' + currentFileName);
+        });
+
+        resetViewBtn.addEventListener('click', () => {
+            camera.position.set(50, 50, 50);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        });
+
+        toggleWireframeBtn.addEventListener('click', () => {
+            wireframeMode = !wireframeMode;
+            modelGroup.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    child.material.wireframe = wireframeMode;
+                }
+            });
+            toggleWireframeBtn.style.background = wireframeMode ? '#094771' : '';
+        });
+
+        // Examples dropdown
+        examplesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            examplesMenu.classList.toggle('visible');
+        });
+
+        document.addEventListener('click', () => {
+            examplesMenu.classList.remove('visible');
+        });
+
+        examplesMenu.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const exampleName = e.target.dataset.example;
+                if (examples[exampleName] && editor) {
+                    editor.setValue(examples[exampleName]);
+                }
+                examplesMenu.classList.remove('visible');
+            });
+        });
+    </script>
+
+    <div class="footer">
+        <a href="https://cadquery.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">CadQuery Docs</a>
+        <span class="footer-sep">|</span>
+        <a href="https://cadquery.readthedocs.io/en/latest/primer.html" target="_blank" rel="noopener noreferrer">Tutorial</a>
+        <span class="footer-sep">|</span>
+        <a href="https://cadquery.readthedocs.io/en/latest/examples.html" target="_blank" rel="noopener noreferrer">Examples</a>
+        <span class="footer-sep">|</span>
+        <a href="https://cadquery.readthedocs.io/en/latest/classreference.html" target="_blank" rel="noopener noreferrer">API Reference</a>
+        <span class="footer-sep" style="margin: 0 15px;">—</span>
+        Built by <a href="https://tabibazar.com" target="_blank" rel="noopener noreferrer">tabibazar.com</a>
+    </div>
+</body>
+</html>
