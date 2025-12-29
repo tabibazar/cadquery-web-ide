@@ -115,7 +115,7 @@ MIT License - see [LICENSE](LICENSE)
 Built by [tabibazar.com](https://tabibazar.com)
 
 Powered by:
-- [CadQuery](https://cadquery.readthedocs.io/) - Python CAD library
+- [CadQuery](https://github.com/CadQuery/cadquery) - Python CAD library ([Documentation](https://cadquery.readthedocs.io/))
 - [FastAPI](https://fastapi.tiangolo.com/) - Python web framework
 - [Three.js](https://threejs.org/) - 3D visualization
 - [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Code editor
